@@ -1,0 +1,4 @@
+*.nds
+tools/cache/
+__pycache__/
+.claude/
