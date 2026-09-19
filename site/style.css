@@ -172,45 +172,62 @@ dialog::backdrop { background: #000b; }
   background: transparent; border: 2px solid var(--muted); border-radius: 6px; padding: 2px 8px; font-size: 13px;
 }
 .t-actions button:hover, .t-switch button:hover, .t-own:hover { border-color: var(--accent); }
+.t-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; margin: 0 2px 6px; }
+.t-toolbar .count { margin-left: auto; }
+.t-levels { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; color: var(--muted); }
+.t-levels strong { color: var(--accent); }
+.t-levels input { flex: 1; min-width: 160px; max-width: 360px; accent-color: var(--accent); }
 .t-bases { display: flex; flex-wrap: wrap; gap: 4px; --icon: 40px; }
-.t-base { position: relative; }
+.t-base { position: relative; display: flex; flex-direction: column; align-items: center; }
 .t-base .t-count { position: absolute; top: 2px; right: 2px; }
+.t-base .rank { margin-top: -2px; font-size: 11px; min-width: 20px; }
 
-.t-scroll { overflow-x: auto; padding: 14px; --icon: 40px; --t-card-h: 104px; --t-mid: calc(var(--t-card-h) / 2); }
+/* Cartes compactes : icône, nom, puis badges et réglages en dessous.
+   Les connecteurs partent du centre de l'icône (--t-mid depuis le haut de la carte),
+   ce qui laisse les cartes libres d'avoir des hauteurs différentes. */
+.t-scroll { overflow-x: auto; padding: 14px 18px 14px 14px; --icon: 36px; --t-mid: 33px; --t-gap: 30px; }
+.t-scroll { cursor: grab; }
+.t-scroll.dragging { cursor: grabbing; user-select: none; }
+.t-scroll.dragging * { cursor: grabbing; }
 .t-canvas { width: max-content; }
 .t-node { display: flex; align-items: flex-start; }
 .t-card {
-  display: flex; align-items: center; gap: 4px; width: 250px; min-height: var(--t-card-h); flex: none;
-  padding: 4px 6px; border: 2px solid #ffffff40; border-radius: 8px; background: var(--bg);
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: 3px;
+  width: 124px; flex: none; padding: 2px 4px 5px;
+  border: 2px solid #ffffff40; border-radius: 8px; background: var(--bg);
 }
 .t-card.root { border-color: var(--accent); }
 .t-card.leaf { border-style: dashed; }
 .t-card.owned { opacity: .55; }
-.t-card .mon { width: 96px; flex: none; }
-.t-card .mon .name { font-size: 12px; }
-.t-info { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; min-width: 0; font-size: 12px; }
-.t-tags { display: flex; flex-wrap: wrap; gap: 3px; }
+.t-card .mon { width: 100%; padding: 1px 2px; gap: 0; }
+.t-card .icon-box { height: calc(var(--icon) * 1.5); }
+.t-card .mon .name { font-size: 11px; max-width: 112px; }
+.t-tags { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 3px; font-size: 11px; }
 .t-tags:empty { display: none; }
+.t-tags .rank { min-width: 20px; font-size: 11px; }
+.t-tags .tag-patch { margin-left: 0; }
 .t-count { background: var(--accent); color: var(--bg); font-weight: 800; border-radius: 5px; padding: 0 5px; font-size: 12px; }
 .t-tag { border: 1px solid var(--muted); color: var(--muted); border-radius: 4px; padding: 0 4px; font-size: 11px; }
-.t-switch { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
-.t-switch button { padding: 0 6px; line-height: 1.3; }
-.t-own { font-size: 11px; padding: 0 6px; }
+.t-switch { display: inline-flex; align-items: center; gap: 2px; white-space: nowrap; }
+.t-switch button { padding: 0 4px; line-height: 1.2; font-size: 11px; border-width: 1px; }
+.t-own { font-size: 11px; padding: 0 5px; line-height: 1.2; border-width: 1px; }
 .t-own[aria-pressed="true"] { background: var(--patch); border-color: var(--patch); color: var(--bg); font-weight: 700; }
 .t-toggle {
-  width: 24px; height: 24px; flex: none; border: 0; background: transparent; color: var(--accent); font-size: 16px;
+  position: absolute; z-index: 1; right: -12px; top: calc(var(--t-mid) - 11px);
+  width: 22px; height: 22px; padding: 0; display: grid; place-items: center;
+  border: 2px solid var(--accent); border-radius: 50%; background: var(--bg); color: var(--accent); font-size: 11px;
 }
-.t-none { display: inline-block; }
+.t-toggle:hover { background: var(--accent); color: var(--bg); }
 
-/* Connecteurs : parent à gauche, parents de la recette empilés à droite, alignés en haut
-   (les lignes partent du milieu des cartes, d'où leur hauteur minimale fixe) */
-.t-children { position: relative; margin: -3px 0 0 24px; display: flex; flex-direction: column; }
+/* Connecteurs : parent à gauche, parents de la recette empilés à droite, alignés en haut */
+.t-children { position: relative; margin: -3px 0 0 var(--t-gap); display: flex; flex-direction: column; }
 .t-children::before {
-  content: ""; position: absolute; left: -24px; top: calc(var(--t-mid) + 3px); width: 24px; border-top: 2px solid var(--muted);
+  content: ""; position: absolute; left: calc(-1 * var(--t-gap)); top: calc(var(--t-mid) + 3px);
+  width: var(--t-gap); border-top: 2px solid var(--muted);
 }
-.t-children > .t-node { position: relative; padding: 3px 0 3px 20px; }
+.t-children > .t-node { position: relative; padding: 3px 0 3px 16px; }
 .t-children > .t-node::before {
-  content: ""; position: absolute; left: 0; top: calc(var(--t-mid) + 3px); width: 20px; border-top: 2px solid var(--muted);
+  content: ""; position: absolute; left: 0; top: calc(var(--t-mid) + 3px); width: 16px; border-top: 2px solid var(--muted);
 }
 .t-children > .t-node::after {
   content: ""; position: absolute; left: 0; top: 0; bottom: 0; border-left: 2px solid var(--muted);
@@ -218,6 +235,16 @@ dialog::backdrop { background: #000b; }
 .t-children > .t-node:first-child::after { top: calc(var(--t-mid) + 3px); }
 .t-children > .t-node:last-child::after { bottom: auto; height: calc(var(--t-mid) + 5px); }
 .t-children > .t-node:only-child::after { display: none; }
+
+/* Retour en haut */
+.to-top {
+  position: fixed; right: 16px; bottom: 16px; z-index: 5;
+  width: 44px; height: 44px; display: grid; place-items: center;
+  border: 3px solid var(--border); border-radius: 50%;
+  background: var(--bg-2); color: var(--accent); font-size: 15px;
+  box-shadow: 0 2px 10px #0008;
+}
+.to-top:hover { background: var(--accent); color: var(--bg); border-color: var(--accent); }
 
 footer { text-align: center; color: var(--muted); font-size: 12px; padding: 16px; }
 
@@ -228,7 +255,5 @@ footer { text-align: center; color: var(--muted); font-size: 12px; padding: 16px
   .recipe .eq { transform: rotate(90deg); align-self: center; line-height: 1; }
   .recipe .parents { justify-content: center; }
   .brand { font-size: 18px; }
-  .t-card { width: 200px; }
-  .t-card .mon { width: 80px; }
   .t-actions { margin-left: 0; }
 }

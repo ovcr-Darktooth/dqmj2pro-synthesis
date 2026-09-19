@@ -2,6 +2,7 @@
   const { monsters: monsterList, recipes: allRecipes } = window.DQ_DATA;
   const monsters = new Map(monsterList.map((m) => [m.id, m]));
 
+  const DEFAULT_LEVELS = 5;
   const RANKS = ["F", "E", "D", "C", "B", "A", "S", "SS", "???"];
   const FAMILIES = ["Slime", "Dragon", "Nature", "Beast", "Material", "Demon", "Zombie", "???"];
 
@@ -48,6 +49,8 @@
       owned: "Déjà obtenu",
       ownedTitle: "Je l'ai déjà : ne pas développer cette branche",
       treeHint: "Clique sur ▸ pour déplier une branche, sur un monstre pour voir sa fiche.",
+      levels: "Niveaux affichés",
+      toTop: "Retour en haut de la page",
     },
     en: {
       title: "DQMJ2 Pro Synthesis",
@@ -90,6 +93,8 @@
       owned: "Owned",
       ownedTitle: "I already have it: don't expand this branch",
       treeHint: "Click ▸ to expand a branch, a monster to open its page.",
+      levels: "Levels shown",
+      toTop: "Back to top",
     },
   };
 
@@ -117,7 +122,7 @@
     // Arbre
     treeRoot: null,
     treeQuery: "",
-    treeDepth: 2,
+    treeLevels: null, // colonnes affichées ; null = DEFAULT_LEVELS (ou moins si l'arbre est moins profond)
     treeOpen: new Map(),
     owned: new Set(storeJson("owned", [])),
     choice: storeJson("choice", {}),
@@ -340,6 +345,11 @@
     return { base, synths };
   }
 
+  // Nombre de niveaux du plan (racine comprise)
+  function planLevels(node) {
+    return node.kind === "synth" ? 1 + Math.max(...node.parents.map((x) => planLevels(x.plan))) : 1;
+  }
+
   function treeNodeHtml(node, n, path) {
     const { id, kind } = node;
     const m = monsters.get(id);
@@ -347,12 +357,14 @@
     const depth = path.length;
     const isRoot = depth === 0;
     const synth = kind === "synth";
-    const open = synth && (state.treeOpen.get(key) ?? depth < state.treeDepth);
+    const open = synth && (state.treeOpen.get(key) ?? depth < state.treeLevels - 1);
 
     const toggle = synth
       ? `<button type="button" class="t-toggle" data-toggle="${key}" aria-expanded="${open}">${open ? "▾" : "▸"}</button>`
-      : '<span class="t-toggle t-none"></span>';
+      : "";
+    const family = t("families")[m.family] || m.family || "";
     const tags = [
+      m.rank ? `<span class="rank" data-r="${esc(m.rank)}" title="${esc(family)}">${esc(m.rank)}</span>` : "",
       n > 1 ? `<span class="t-count">×${n}</span>` : "",
       kind === "base" ? `<span class="t-tag" title="${esc(t("baseTitle"))}">${t("base")}</span>` : "",
       kind === "cycle" ? `<span class="t-tag" title="${esc(t("cycleTitle"))}">${t("cycle")}</span>` : "",
@@ -365,7 +377,8 @@
           <button type="button" data-choice="${id}" data-current="${node.idx}" data-count="${node.recipes.length}" data-dir="1" aria-label="${esc(t("recipeSwitch"))}">›</button>
         </span>` : "";
     const ownBtn = !isRoot && (synth || kind === "owned")
-      ? `<button type="button" class="t-own" data-own="${id}" aria-pressed="${kind === "owned"}" title="${esc(t("ownedTitle"))}">✓ ${t("owned")}</button>`
+      ? `<button type="button" class="t-own" data-own="${id}" aria-pressed="${kind === "owned"}" title="${esc(`${t("owned")} : ${t("ownedTitle")}`)}"
+          aria-label="${esc(t("owned"))}">✓</button>`
       : "";
     const children = open
       ? `<div class="t-children">${node.parents
@@ -374,9 +387,9 @@
 
     return `<div class="t-node">
       <div class="t-card${kind === "owned" ? " owned" : ""}${kind === "base" || kind === "cycle" ? " leaf" : ""}${isRoot ? " root" : ""}">
-        ${toggle}
         ${monHtml(id)}
-        <div class="t-info">${rankHtml(m)}<div class="t-tags">${tags}</div>${switcher}${ownBtn}</div>
+        <div class="t-tags">${tags}${switcher}${ownBtn}</div>
+        ${toggle}
       </div>
       ${children}
     </div>`;
@@ -399,11 +412,24 @@
       return;
     }
     const plan = buildPlan(root);
+    const maxLevels = planLevels(plan);
+    state.treeLevels = Math.min(state.treeLevels ?? DEFAULT_LEVELS, maxLevels);
     const { base, synths } = planTotals(plan);
     const needed = [...base.values()].reduce((a, b) => a + b, 0);
+    // Du rang le plus haut au plus bas, puis par quantité décroissante
+    const rankOrder = (id) => {
+      const i = RANKS.indexOf(monsters.get(id).rank);
+      return i < 0 ? RANKS.length : RANKS.length - 1 - i;
+    };
     const baseChips = [...base]
-      .sort((a, b) => b[1] - a[1] || nameOf(monsters.get(a[0])).localeCompare(nameOf(monsters.get(b[0]))))
-      .map(([id, n]) => `<div class="t-base">${monHtml(id)}<span class="t-count">×${n}</span></div>`).join("");
+      .sort((a, b) => rankOrder(a[0]) - rankOrder(b[0]) || b[1] - a[1]
+        || nameOf(monsters.get(a[0])).localeCompare(nameOf(monsters.get(b[0]))))
+      .map(([id, n]) => {
+        const m = monsters.get(id);
+        const family = t("families")[m.family] || m.family || "";
+        return `<div class="t-base">${monHtml(id)}<span class="t-count">×${n}</span>
+          ${m.rank ? `<span class="rank" data-r="${esc(m.rank)}" title="${esc(family)}">${esc(m.rank)}</span>` : ""}</div>`;
+      }).join("");
 
     body.innerHTML = `
       <div class="window t-summary">
@@ -418,8 +444,24 @@
         </div>
         ${synths ? `<h3>${t("baseList")}</h3><div class="t-bases">${baseChips}</div>` : ""}
       </div>
-      <p class="count">${t("treeHint")}</p>
-      <div class="window t-scroll"><div class="t-canvas">${treeNodeHtml(plan, 1, [])}</div></div>`;
+      <div class="t-toolbar">
+        ${maxLevels > 1 ? `<label class="t-levels">
+          <span>${t("levels")} : <strong id="tree-levels-value">${state.treeLevels}</strong> / ${maxLevels}</span>
+          <input type="range" id="tree-levels" min="1" max="${maxLevels}" step="1" value="${state.treeLevels}">
+        </label>` : ""}
+        <p class="count">${t("treeHint")}</p>
+      </div>
+      <div class="window t-scroll"><div class="t-canvas"></div></div>`;
+    renderTreeCanvas();
+  }
+
+  // Seul l'arbre est redessiné quand le curseur bouge (le curseur garde le focus pendant le glisser)
+  function renderTreeCanvas() {
+    const canvas = $(".t-canvas");
+    if (!canvas) return;
+    canvas.innerHTML = treeNodeHtml(buildPlan(state.treeRoot), 1, []);
+    const value = $("#tree-levels-value");
+    if (value) value.textContent = state.treeLevels;
   }
 
   function saveTreePrefs() {
@@ -447,6 +489,8 @@
     document.documentElement.lang = state.lang;
     document.querySelectorAll("[data-i18n]").forEach((el) => { el.textContent = t(el.dataset.i18n); });
     document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => { el.placeholder = t(el.dataset.i18nPlaceholder); });
+    document.querySelectorAll("[data-i18n-title]").forEach((el) => { el.title = t(el.dataset.i18nTitle); });
+    document.querySelectorAll("[data-i18n-label]").forEach((el) => { el.setAttribute("aria-label", t(el.dataset.i18nLabel)); });
     document.title = t("title");
     document.querySelectorAll("[data-lang]").forEach((b) => b.setAttribute("aria-pressed", b.dataset.lang === state.lang));
     document.querySelectorAll("[data-rom]").forEach((b) => b.setAttribute("aria-pressed", b.dataset.rom === state.rom));
@@ -475,6 +519,7 @@
       const root = tree[1] ? Number(tree[1]) : state.treeRoot;
       if (root !== state.treeRoot) {
         state.treeRoot = root;
+        state.treeLevels = null;
         state.treeOpen.clear();
         window.scrollTo(0, 0);
       }
@@ -491,7 +536,6 @@
     if (treeBtn) {
       state.treeQuery = "";
       $("#tree-search").value = "";
-      state.treeDepth = 2;
       return go(`#t/${treeBtn.dataset.tree}`);
     }
     const toggle = target.closest("[data-toggle]");
@@ -518,12 +562,12 @@
     if (action) {
       const kind = action.dataset.treeAction;
       state.treeOpen.clear();
-      if (kind === "expand") state.treeDepth = Infinity;
-      if (kind === "collapse") state.treeDepth = 1;
+      if (kind === "expand") state.treeLevels = Infinity;
+      if (kind === "collapse") state.treeLevels = 1;
       if (kind === "reset") {
         state.choice = {};
         state.owned.clear();
-        state.treeDepth = 2;
+        state.treeLevels = null;
         saveTreePrefs();
       }
       return rerenderTree();
@@ -563,6 +607,69 @@
     };
   };
   $("#search").addEventListener("input", debounce((value) => { state.query = value; renderList(); }));
+  // Bouton « retour en haut » : visible seulement une fois la page défilée
+  const toTop = $("#to-top");
+  const updateToTop = () => { toTop.hidden = scrollY < 300; };
+  addEventListener("scroll", updateToTop, { passive: true });
+  updateToTop();
+  toTop.addEventListener("click", () => {
+    const smooth = !matchMedia("(prefers-reduced-motion: reduce)").matches;
+    scrollTo({ top: 0, behavior: smooth ? "smooth" : "auto" });
+  });
+
+  // Cliquer-glisser dans l'arbre (souris) : défile le cadre horizontalement et la page verticalement.
+  // Le glissement démarre après quelques pixels pour laisser passer les clics simples.
+  const DRAG_THRESHOLD = 5;
+  let drag = null;
+  let suppressClick = false;
+  document.addEventListener("pointerdown", (e) => {
+    const scroller = e.target.closest(".t-scroll");
+    if (!scroller || e.pointerType !== "mouse" || e.button !== 0) return;
+    drag = { scroller, x: e.clientX, y: e.clientY, moved: false };
+  });
+  document.addEventListener("pointermove", (e) => {
+    if (!drag) return;
+    const dx = e.clientX - drag.x;
+    const dy = e.clientY - drag.y;
+    if (!drag.moved && Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
+    if (!drag.moved) {
+      drag.moved = true;
+      drag.scroller.classList.add("dragging");
+      window.getSelection()?.removeAllRanges();
+    }
+    drag.scroller.scrollLeft -= dx;
+    window.scrollBy(0, -dy);
+    drag.x = e.clientX;
+    drag.y = e.clientY;
+  });
+  const endDrag = () => {
+    if (!drag) return;
+    if (drag.moved) {
+      drag.scroller.classList.remove("dragging");
+      suppressClick = true;
+      setTimeout(() => { suppressClick = false; }, 0);
+    }
+    drag = null;
+  };
+  document.addEventListener("pointerup", endDrag);
+  document.addEventListener("pointercancel", endDrag);
+  // Le clic qui termine un glissement ne doit ni ouvrir une fiche ni replier une branche
+  document.addEventListener("click", (e) => {
+    if (suppressClick) {
+      e.stopPropagation();
+      e.preventDefault();
+      suppressClick = false;
+    }
+  }, true);
+
+  let levelsFrame;
+  document.addEventListener("input", (e) => {
+    if (e.target.id !== "tree-levels") return;
+    state.treeLevels = Number(e.target.value);
+    state.treeOpen.clear();
+    clearTimeout(levelsFrame);
+    levelsFrame = setTimeout(renderTreeCanvas, 16);
+  });
   $("#tree-search").addEventListener("input", debounce((value) => { state.treeQuery = value; renderTree(); }));
 
   window.addEventListener("popstate", route);

@@ -46,5 +46,9 @@ pour chaque monstre, la recette (ou le choix manuel ‹ › ) qui minimise le no
 Un monstre sans synthèse spéciale est une feuille « base » ; un monstre déjà présent dans sa propre branche
 est une feuille « ↻ » (à obtenir autrement). Les parents identiques sont regroupés (×4), « Déjà obtenu »
 coupe une branche. Choix et monstres obtenus sont mémorisés dans le navigateur.
+Le curseur « Niveaux affichés » règle la profondeur dépliée (5 par défaut, ou moins si l'arbre est moins profond).
+La zone de l'arbre se déplace au cliquer-glisser (souris) : horizontalement dans le cadre, verticalement en faisant
+défiler la page. Le glissement démarre après 5 px, pour ne pas gêner les clics.
+Un bouton « retour en haut » apparaît en bas à droite dès 300 px de défilement.
 
 Pensez à incrémenter `?v=` dans `site/index.html` après modification de `style.css`, `app.js` ou `data.js`.
