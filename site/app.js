@@ -1,5 +1,5 @@
 (() => {
-  const { monsters: monsterList, recipes: allRecipes } = window.DQ_DATA;
+  const { monsters: monsterList, recipes: romRecipes, versions } = window.DQ_DATA;
   const monsters = new Map(monsterList.map((m) => [m.id, m]));
 
   const DEFAULT_LEVELS = 5;
@@ -11,6 +11,8 @@
       title: "Synthèses DQMJ2 Pro",
       romOriginal: "ROM originale",
       romPatch: "ROM patchée",
+      patchVersion: "Version du patch",
+      latest: "actuelle",
       tabRecipes: "Recettes",
       tabMonsters: "Monstres",
       search: "Rechercher un monstre…",
@@ -56,6 +58,8 @@
       title: "DQMJ2 Pro Synthesis",
       romOriginal: "Original ROM",
       romPatch: "Patched ROM",
+      patchVersion: "Patch version",
+      latest: "latest",
       tabRecipes: "Recipes",
       tabMonsters: "Monsters",
       search: "Search a monster…",
@@ -114,6 +118,8 @@
   const state = {
     lang: store.get("lang", "fr"),
     rom: store.get("rom", "patch"),
+    // Version du patch, identifiée par son premier tag (stable quand une nouvelle release s'ajoute au groupe)
+    version: versions.some((v) => v.tags[0] === store.get("version", "")) ? store.get("version", "") : versions[0].tags[0],
     view: "recipes",
     query: "",
     ranks: new Set(),
@@ -134,7 +140,18 @@
   const norm = (s) => s.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
 
   const nameOf = (m) => m.name[state.lang] || m.name.en;
-  const recipes = () => (state.rom === "patch" ? allRecipes : allRecipes.filter((r) => !r.patch));
+  // Recettes de la ROM (+ celles de la version du patch choisie), triées par numéro de bestiaire du résultat
+  let recipesCache = { key: null, list: null };
+  function recipes() {
+    const key = state.rom === "patch" ? state.version : "original";
+    if (recipesCache.key !== key) {
+      const added = state.rom === "patch" ? versions.find((v) => v.tags[0] === state.version).recipes : [];
+      const order = (r) => monsters.get(r.r).dex ?? 9999;
+      const list = [...romRecipes, ...added].sort((a, b) => order(a) - order(b) || a.r - b.r || a.patch - b.patch);
+      recipesCache = { key, list };
+    }
+    return recipesCache.list;
+  }
 
   // --- Rendu des briques ---------------------------------------------------
 
@@ -304,7 +321,7 @@
   let planCache = { key: null, plan: null };
 
   function buildPlan(root) {
-    const key = JSON.stringify([state.rom, root, state.choice, [...state.owned]]);
+    const key = JSON.stringify([state.rom, state.version, root, state.choice, [...state.owned]]);
     if (planCache.key === key) return planCache.plan;
     const byResult = recipesByResult();
     const path = new Set();
@@ -494,6 +511,7 @@
     document.title = t("title");
     document.querySelectorAll("[data-lang]").forEach((b) => b.setAttribute("aria-pressed", b.dataset.lang === state.lang));
     document.querySelectorAll("[data-rom]").forEach((b) => b.setAttribute("aria-pressed", b.dataset.rom === state.rom));
+    renderVersions();
     document.querySelectorAll("[data-view]").forEach((b) => b.setAttribute("aria-selected", b.dataset.view === state.view));
     const tree = state.view === "tree";
     $("#tree").hidden = !tree;
@@ -506,6 +524,14 @@
     }
     const open = location.hash.match(/^#m\/(\d+)$/);
     if (open && $("#detail").open) openDetail(Number(open[1]));
+  }
+
+  function renderVersions() {
+    const date = (d) => new Date(`${d}T12:00:00`).toLocaleDateString(state.lang);
+    $("#version-picker").hidden = state.rom !== "patch";
+    $("#version").innerHTML = versions.map((v, i) => `<option value="${esc(v.tags[0])}"
+      ${v.tags[0] === state.version ? "selected" : ""} title="${esc(v.tags.join(", "))}">${esc(v.label)} (${
+      i ? date(v.date) : t("latest")})</option>`).join("");
   }
 
   // #m/<id> : fiche (par-dessus la vue courante) · #t ou #t/<id> : arbre · vide : listes
@@ -606,6 +632,10 @@
       timer = setTimeout(() => fn(e.target.value), 120);
     };
   };
+  $("#version").addEventListener("change", (e) => {
+    store.set("version", (state.version = e.target.value));
+    applySettings();
+  });
   $("#search").addEventListener("input", debounce((value) => { state.query = value; renderList(); }));
   // Bouton « retour en haut » : visible seulement une fois la page défilée
   const toTop = $("#to-top");
