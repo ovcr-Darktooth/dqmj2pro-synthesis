@@ -2,7 +2,7 @@
 
 Site statique listant toutes les synthèses spéciales de *Dragon Quest Monsters: Joker 2 Professional*,
 avec l'icône de chaque monstre, une fiche par monstre (stats, traits, recettes pour l'obtenir, recettes où il sert),
-un sélecteur de langue et un réglage « ROM originale / ROM patchée ».
+un sélecteur de langue, un réglage « ROM originale / ROM patchée » et un sélecteur de version du patch.
 
 ## Lancer le site
 
@@ -23,14 +23,22 @@ python tools/extract_icons.py "chemin/vers/Dragon Quest Monsters - Joker 2 Profe
 ```
 
 ```bash
-python tools/build_data.py --refresh
+python tools/build_data.py --refresh --rom "chemin/vers/Dragon Quest Monsters - Joker 2 Professional (J).nds"
 ```
 
 - `extract_icons.py` lit `MonsterIconDat.NICA` dans la ROM et écrit `site/icons/<id>.png` (+ `index.json`).
   Le format est documenté en tête du script.
-- `build_data.py` télécharge les bases de [DQMJ2Pro_Translation_FR](https://github.com/p0chilla/DQMJ2Pro_Translation_FR)
-  (cache dans `tools/cache/`) et écrit `site/data.js`. Les recettes présentes dans `new_synths_*.csv` sont marquées
-  « patch » et masquées en mode ROM originale.
+- `build_data.py` écrit `site/data.js` :
+  - **ROM originale** : tables `CombinationKindTbl.bin` (2 parents) et `Combination4GTbl.bin` (4 parents) de la ROM,
+    lues avec `--rom` et gardées dans `tools/vanilla_synths.json` (sans `--rom`, ce fichier est réutilisé).
+  - **ROM patchée** : le patcher ajoute à ces tables les lignes de `Database/new_synths_kind.csv` et
+    `new_synths_4g.csv`. Le script les lit pour chaque tag de version ≥ v1.0.0 de
+    [DQMJ2Pro_Translation](https://github.com/Saneezore/DQMJ2Pro_Translation) (liste des tags via l'API GitHub)
+    et regroupe les tags consécutifs aux recettes identiques en une seule version du sélecteur.
+    `synthesis_database.csv` n'est pas utilisé : c'est une documentation, pas ce que le patcher écrit.
+  - Noms anglais, rangs, stats et traits : dernier tag. Cache dans `tools/cache/` ; `--refresh` retélécharge la liste
+    des tags et les noms FR (les fichiers d'un tag ne changent pas).
+  - Une nouvelle release du patch est prise en compte en relançant `python tools/build_data.py --refresh`.
 
 ## Noms français
 

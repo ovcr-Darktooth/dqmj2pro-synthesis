@@ -50,6 +50,13 @@ a { color: var(--accent); }
 .seg { display: inline-flex; border: 2px solid var(--border); border-radius: 999px; overflow: hidden; }
 .seg button { background: transparent; border: 0; padding: 6px 12px; }
 .seg button[aria-pressed="true"] { background: var(--border); color: var(--bg); font-weight: 600; }
+.version { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
+.version[hidden] { display: none; }
+.version select {
+  font: inherit; color: var(--text); background: var(--bg); border: 2px solid var(--border);
+  border-radius: 999px; padding: 5px 10px;
+}
+.version select:focus-visible { outline: none; border-color: var(--accent); }
 #lang-toggle button { padding: 4px 10px; display: grid; place-items: center; }
 #lang-toggle button:not([aria-pressed="true"]) .flag { opacity: .45; }
 .flag { width: 24px; height: 16px; display: block; border-radius: 2px; }
