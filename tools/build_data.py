@@ -149,6 +149,10 @@ def main():
     def monster(mid):
         if not 0 < mid < len(lines) or not lines[mid].strip():
             return None
+        # Doublon interne (ex. #480 Stella, cité par erreur dans les premières versions du patch) :
+        # on ne garde que le premier ID de ce nom, les recettes du doublon sont ignorées
+        if by_name[lines[mid].strip().lower()] != mid:
+            return None
         return monsters.setdefault(mid, {"id": mid, "name": {"en": lines[mid].strip()}})
 
     def valid(rid, pids, source):
@@ -203,12 +207,6 @@ def main():
         m["size"] = int(size) if size.strip().isdigit() else None
         m["stats"] = [int(v) for v in rest[:6]]
         m["traits"] = [t.strip() for t in rest[6:] if t.strip()]
-    # Doublons internes (ex. #480 Stella, cité par erreur dans les premières versions du patch) :
-    # rang et famille du monstre de même nom, sans stats
-    for m in monsters.values():
-        twin = monsters.get(by_name[m["name"]["en"].lower()])
-        if "rank" not in m and twin and "rank" in twin:
-            m["rank"], m["family"] = twin["rank"], twin["family"]
     no_rank = [m["name"]["en"] for m in monsters.values() if "rank" not in m]
     if no_rank:
         warnings.append(f"{len(no_rank)} monstre(s) sans rang : {no_rank}")

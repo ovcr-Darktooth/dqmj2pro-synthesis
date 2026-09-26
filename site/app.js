@@ -3,7 +3,7 @@
   const monsters = new Map(monsterList.map((m) => [m.id, m]));
 
   const DEFAULT_LEVELS = 5;
-  const RANKS = ["F", "E", "D", "C", "B", "A", "S", "SS", "???"];
+  const RANKS = ["F", "E", "D", "C", "B", "A", "S", "SS"];
   const FAMILIES = ["Slime", "Dragon", "Nature", "Beast", "Material", "Demon", "Zombie", "???"];
 
   const I18N = {
